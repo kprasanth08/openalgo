@@ -31,7 +31,8 @@ COPY --chown=appuser:appuser . .
 
 # 3 – entrypoint script
 COPY --chown=appuser:appuser start.sh /start.sh
-RUN chmod +x /start.sh
+RUN chmod +x /start.sh && \
+    sed -i 's/\r$//' /start.sh  # Remove Windows CRLF if present
 
 # ---- RUNTIME ENVS --------------------------------------------------------- #
 ENV PATH="/app/.venv/bin:$PATH" \
