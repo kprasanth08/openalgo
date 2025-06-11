@@ -65,7 +65,10 @@ class WebSocketProxy:
         # ZeroMQ context for subscribing to broker adapters
         self.context = zmq.asyncio.Context()
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect("tcp://localhost:5555")  # Connect to broker adapter publisher
+        # Connecting to ZMQ
+        ZMQ_HOST = os.getenv('ZMQ_HOST', 'localhost')
+        ZMQ_PORT = os.getenv('ZMQ_PORT')
+        self.socket.connect(f"tcp://{ZMQ_HOST}:{ZMQ_PORT}")  # Connect to broker adapter publisher
         
         # Set up ZeroMQ subscriber to receive all messages
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")  # Subscribe to all topics
@@ -831,7 +834,11 @@ class WebSocketProxy:
                     continue
                 
                 # Find clients subscribed to this data
-                for client_id, subscriptions in self.subscriptions.items():
+                # Create a snapshot of the subscriptions before iteration to avoid
+                # 'dictionary changed size during iteration' errors
+                subscriptions_snapshot = list(self.subscriptions.items())
+                
+                for client_id, subscriptions in subscriptions_snapshot:
                     user_id = self.user_mapping.get(client_id)
                     if not user_id:
                         continue
@@ -841,7 +848,9 @@ class WebSocketProxy:
                     if broker_name != "unknown" and client_broker and client_broker != broker_name:
                         continue  # Skip if broker doesn't match
                     
-                    for sub_json in subscriptions:
+                    # Create a snapshot of the subscription set before iteration
+                    subscriptions_list = list(subscriptions)
+                    for sub_json in subscriptions_list:
                         try:
                             sub = json.loads(sub_json)
                             
